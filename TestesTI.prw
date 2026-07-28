@@ -1,4 +1,4 @@
-// #include "totvs.ch"
+#include "totvs.ch"
 #include "protheus.ch"
 #include "TOPCONN.CH"
 
@@ -9,24 +9,17 @@ user function TestesTI()	// U_uReadExc()
 	local aCampos 	:= {}
 	local aDados	:= {}
 	local aLinha 	:= {}
-	Local AxSZ1IMP   := {}
+	local  AxSZ1IMP   := {}
+	local lcabok    := .F.
 	//Variaveis para mapear os campos
 	//Local lincount  := 1
 	Local lPrimLin := .T.
-	Local NJX      := 1
+	Local njx      := 1
 	Local nProc		:= 0
-	Local nAtual := 0
+	Local nAtual := 1
 	local qtdaux := 0
-//	Local cCodUse	:= RetCodUsr()
-	// Local cNomeUs	:= Alltrim(UsrRetName(cCodUse))
-	// Local cFullNo	:= Alltrim(UsrFullName(cCodUse))
-	// Local cData  	:= SubStr(cValToChar(FWTimeStamp(2)),1,10)
-	// Local cHora  	:= SubStr(cValToChar(FWTimeStamp(2)),12,8)
-	// Local cLog   	:= ''
-	// Local cId		:= ''
-	// Local cRotina	:= FunName()
 
-//
+
 	//Abrir uma tela para escolher o arquivo.
 	cDiret := cGetFile('Arquivo CSV|*.csv| Arquivo TXT|*.txt| Arquivos XML|*.xml',; //Máscara e extensão dos arqv que o usuário poderá visualizar.
 	'Selecao de Arquivos',;											//cTitulo da janela pop-up.
@@ -77,40 +70,49 @@ user function TestesTI()	// U_uReadExc()
 				lcabok := .F. 							//Desliga a flag de verificação do cabeçalho. Isso impede que este bloco If lcabok rode novamente quando o loop ler a linha 3 (dados dos produtos)
 				FT_FSKIP() //Pula para a próxima linha do arquivo. Isso é necessário porque a segunda linha do arquivo é só o cabeçalho, não tem dados.		
 			else
-				Alert("Cabecalho da tabela não foi encontrado, campos Descrição | Quantidade | Data | Valor")
+				Alert("Cabeçalho da tabela não foi encontrado, indique no arquivo os campos Descrição | Quantidade | Data | Valor") // caiu aqui
 				return
 			endif
 		endif
 
-		adados := Separa(FT_FREADLN(),";",.T.)
-
-		aadd(AXSZ1IMP,{adados[1],adados[2],adados[3],adados[4],adados[5]})
-
-		FT_FSKIP()
+		adados := Separa(FT_FREADLN(),";",.T.)			//lê a linha corrente de dados
+														//Separa(..., ";", .T.) fatia a string nos pontos e vírgulas e joga na variável adados
+		aadd(AXSZ1IMP,{adados[1],adados[2],adados[3],adados[4],adados[5]}) //adiciona um novo elemento/linha ao final de um Array
+														//{adados[1], ...}: Cria uma sub-lista com os 5 valores da linha atual e insere dentro do vetor AXSZ1IMP
+														//O array AXSZ1IMP agora guarda todos os produtos carregados do arquivo antes de fazer a gravação oficial no BD
+		FT_FSKIP()										//Move o ponteiro do arquivo para a próxima linha (linha de baixo) do CSV
 
 	EndDo
 
-	qtdaux := Len(AXSZ1IMP)
+	
+//qtdaux := ...: Armazena a quantidade total de registros lidos na variável
+	qtdaux := Len(AXSZ1IMP) //Len() conta quantos elementos/linhas existem dentro do array AXSZ1IMP
 	//Count To nProc
-	ProcRegua(qtdaux)															//Inicia o processo da Regua de processo
-	Begin Transaction
-		If Len(AXSZ1IMP) != 0
-			dbselectarea("SZ1")
-			For njx := 1 to len(AXSZ1IMP)
-				IncProc("Analisando registro " + cValToChar(nAtual) + " de " + cValToChar(nProc) + "...")
+	ProcRegua(qtdaux)									//Inicia o processo da Regua de processo
+	Begin Transaction 									//Abre um bloco de Transação com o BD. Se ocorrer algum erro crítico dentro desse bloco, o BD pode fazer um Rollback
+		If Len(AXSZ1IMP) != 0 							//Verifica se o array tem pelo menos 1 registro. Se estiver vazio, ele pula todo o processo.
+			dbselectarea("SZ1") 						//Abre/aponta o ponteiro de trabalho do Protheus para a tabela SZ1
+			For njx := 1 to len(AXSZ1IMP)				//Cria um loop que vai iterar do registro 1 até o último item do array AXSZ1IMP. A variável njx guarda o índice da linha atual.
+				IncProc("Analisando registro " + cValToChar(nAtual) + " de " + cValToChar(nProc) + "...") //cValToChar(...): Converte valores numéricos para texto (string), permitindo concatenar mensagens.
 
-				IF (!alltrim(AXSZ1IMP[njx][1]) == "") .AND. (!alltrim(AXSZ1IMP[njx][2]) == "") .AND. (!alltrim(AXSZ1IMP[njx][3]) == "")
-					SZ1->(dbSetOrder(8))
+				IF (!alltrim(AXSZ1IMP[njx][1]) == "") .AND. (!alltrim(AXSZ1IMP[njx][2]) == "") .AND. (!alltrim(AXSZ1IMP[njx][3]) == "") //XSZ1IMP[njx][1]: Acessa a coluna 1 da linha njx dentro do array.
+					SZ1->(dbSetOrder(8))				//Ativa o Índice 8 da tabela SZ1 na dicionário do Protheus. Os índices determinam a ordem e os campos pelos quais a busca será feita.
 					if SZ1->(DBSEEK(XFILIAL("SZ1")+Padr(AXSZ1IMP[njx][1],TamSX3("SZ1_CODPRO" )[1])+Padr(AXSZ1IMP[njx][2],TamSX3("SZ1_CODMON" )[1])))
-						Reclock("SZ1",.F.) /// .t. GERA, .F. ALTERA
-						SZ1->Z1_FILIAL := "01"
-						SZ1->Z1_COD := AXSZ1IMP[njx][1]
-						SZ1->SZ1_PRCVEN := AXSZ1IMP[njx][2]
-						SZ1->SZ1_PRCVENB := (AXSZ1IMP[njx][2] * 0.7)
-						Msunlock()
+					//DbSeek(...): Faz uma busca rápida no banco de dados usando o índice ativo.
+					//xFilial("SZ1"): Retorna o código da filial corrente do usuário (ex: "01").
+					//TamSX3("SZ1_CODPRO")[1]: Retorna o tamanho exato do campo no Protheus (ex: 15 caracteres).
+					//Padr(..., tamanho): Preenche o texto com espaços à direita até completar o tamanho do campo no banco (vital para o DbSeek funcionar).
+						Reclock("SZ1",.F.) /// .t. GERA, .F. ALTERA | função responsável por travar o registro na tabela para gravação.			
+						SZ1->Z1_FILIAL := xFilial("SZ1")				// Pega a filial corrente do sistema
+						SZ1->Z1_COD   := AXSZ1IMP[njx][1]
+						SZ1->Z1_DESC  := AXSZ1IMP[njx][2]
+						SZ1->Z1_QTDE   := Val(AXSZ1IMP[njx][3])           // Converte o texto da Qtd para Número
+						SZ1->Z1_DATA  := SToD(AXSZ1IMP[njx][4])          // Converte texto (AAAAMMDD) para Data (String To Date)
+						SZ1->Z1_VALOR := Val(AXSZ1IMP[njx][5])           // Converte o texto do Valor para Número
+						Msunlock() // Destrava o registro e confirma a gravacao
 					ENDIF
 				ENDIF
-				nAtual++
+				nAtual++								//Toda vez que o código passa por essa linha dentro do laço For ... Next, o valor contido na variável nAtual aumenta em 1 unidade
 			next
 		EndIf
 	End Transaction
