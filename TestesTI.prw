@@ -18,10 +18,12 @@ User Function TestesTI()
     Local nAtual      := 1
     Local qtdaux      := 0
 
-
     Local nIncluidos := 0
     Local nAlterados := 0
-    Local FWAlertSuccess := ""
+    Local cMsg := ""
+
+    Local cLinha      := ""
+    Local cCodAux     := ""
 
     // Abrir uma tela para escolher o arquivo.
     cDiret := cGetFile('Arquivo CSV|*.csv| Arquivo TXT|*.txt| Arquivos XML|*.xml',; // Máscara e extensão dos arqv
@@ -46,20 +48,32 @@ User Function TestesTI()
     While !FT_FEOF()                                    // Enquanto não for o final do arquivo
         
         IncProc('Lendo Arquivo texto...')               // Anda a barra de progresso
-        aLinha := Separa(FT_FREADLN(), ";", .T.)        // Lê a linha atual e fatia pelo delimitador ";"
+        
+        // Limpeza dos caracteres ocultos do LibreOffice
+        cLinha := FT_FREADLN()
+        cLinha := StrTran(cLinha, Chr(13), "")
+        cLinha := StrTran(cLinha, Chr(10), "")
+        cLinha := StrTran(cLinha, '"', "")
+        
+        // Remove marcação BOM UTF-8 se estiver na primeira linha
+        If lPrimLin
+            cLinha := StrTran(cLinha, Chr(239)+Chr(187)+Chr(191), "")
+        EndIf
+
+        aLinha := Separa(cLinha, ";", .T.)                // Lê a linha atual e fatia pelo delimitador ";"
         
         // Validação da primeira linha do arquivo
         IF lPrimLin                                         
             aCampos := aLinha                           // Lê a segunda linha (Nome das colunas)
             
             // Conferindo se o nome de cada coluna está na ordem esperada
-            //aCampos  := Separa(FT_FREADLN(),";",.T.)	
+            //aCampos  := Separa(FT_FREADLN(),";",.T.)  
             If (Len(aCampos) >= 5 .AND. ;
-                (aCampos[1] == "COD") .AND. ; 
-                (aCampos[2] == "DESC") .AND. ;
-                (aCampos[3] == "QTDE") .AND. ; 
-                (aCampos[4] == "DATA") .AND. ; 
-                (aCampos[5] == "VALOR")) 
+                (AllTrim(aCampos[1]) == "COD") .AND. ; 
+                (AllTrim(aCampos[2]) == "DESC") .AND. ;
+                (AllTrim(aCampos[3]) == "QTDE") .AND. ; 
+                (AllTrim(aCampos[4]) == "DATA") .AND. ; 
+                (AllTrim(aCampos[5]) == "VALOR")) 
                 
                 lPrimLin := .F.                         // Desliga a flag de primeira linha.
                 lcabok   := .T.                      // Liga a flag de cabeçalho ok.                        
@@ -79,12 +93,15 @@ User Function TestesTI()
                                                         
         // -------- verifica se o array  tem os 5 itens esperados antes de gravá-lo no array de importação
         If Len(aDados) >= 5
-            Aadd(AxSZ1IMP, {aDados[1], aDados[2], aDados[3], aDados[4], aDados[5]}) 
+            Aadd(AxSZ1IMP, {AllTrim(aDados[1]), AllTrim(aDados[2]), AllTrim(aDados[3]), AllTrim(aDados[4]), AllTrim(aDados[5])}) 
         EndIf
                                                         
         FT_FSKIP()                                         // Move para a próxima linha do CSV
 
     EndDo
+
+
+   
     
     FT_FUSE() // Libera/fecha o arquivo da memória após terminar a leitura
 
@@ -109,29 +126,31 @@ User Function TestesTI()
                     
                     SZ1->(dbSetOrder(1))                // Ativa o Índice 1 da SZ1 (Z1_COD)
                     
+                    cCodAux := Padr(AxSZ1IMP[njx][1], TamSX3("Z1_COD")[1])
+
                     // Busca no banco se o registro já existe (Código alinhado com o tamanho do dicionário)
-                    If SZ1->(DBSEEK(Padr(AxSZ1IMP[njx][1], TamSX3("Z1_COD")[1])))
+                    If SZ1->(DBSEEK(cCodAux))
                         // Se ENCONTROU, trava para ALTERAÇÃO
                         Reclock("SZ1", .F.)      
-						 nAlterados++       
+                         nAlterados++       
                     Else
                         // Se NÃO ENCONTROU, trava para INCLUSÃO
                         Reclock("SZ1", .T.)
-						 nIncluidos++
+                         nIncluidos++
                     EndIf
                     
                     // Preenche os campos do banco com os dados do array
                     SZ1->Z1_FILIAL := xFilial("SZ1")                // Pega a filial corrente do sistema
-                    SZ1->Z1_COD    := AxSZ1IMP[njx][1]              // Código
+                    SZ1->Z1_COD    := cCodAux                       // Código
                     SZ1->Z1_DESC   := AxSZ1IMP[njx][2]              // Descrição
-                    SZ1->Z1_QTDE   := Val(AxSZ1IMP[njx][3])         // Converte para Número
+                    SZ1->Z1_QTDE   := Val(StrTran(AxSZ1IMP[njx][3], ",", ".")) // Converte para Número
                     
                     // Se data no CSV como AAAAMMDD contínuo (ex: 19990313), SToD() 
                     // Se data formato "13/03/1999", CToD()
                     SZ1->Z1_DATA   := CToD(AxSZ1IMP[njx][4])        
                     
                     //SZ1->Z1_VALOR  := Val(AxSZ1IMP[njx][5])         // val() Converte para Número
-                    SZ1->Z1_VALOR := Val(StrTran(AXSZ1IMP[njx][5], ",", ".")) //StrTran()substitui: a vírgula pelo ponto
+                    SZ1->Z1_VALOR := Val(StrTran(AxSZ1IMP[njx][5], ",", ".")) //StrTran()substitui: a vírgula pelo ponto
                     
                     MsUnlock() // Destrava o registro e confirma a gravação na tabela
                 EndIf
@@ -141,16 +160,13 @@ User Function TestesTI()
         EndIf
         
     End Transaction
-	
+    
    // Alert("Sucesso! Processados " + cValToChar(nAtual-1) + " de " + cValToChar(qtdaux) + " registros encontrados no CSV.")
-   FWAlertSuccess += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
-    FWAlertSuccess += "Total de linhas no arquivo: " + cValToChar(qtdaux) + CRLF
-    FWAlertSuccess += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
-    FWAlertSuccess += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
+   cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
+    cMsg += "Total de linhas no arquivo: " + cValToChar(qtdaux) + CRLF
+    cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
+    cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
 
-    MsgInfo(FWAlertSuccess, "Resultado da Importação")
-
-
+    FWAlertSuccess(cMsg, "Resultado da Importação")
 
 Return
-
