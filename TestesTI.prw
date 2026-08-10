@@ -124,7 +124,7 @@ User Function TestesTI()
                 IncProc("Analisando e gravando registro " + cValToChar(nAtual) + " de " + cValToChar(qtdaux) + "...") 
 
                 // Verifica se os campos não estão vazios
-                If (!Empty(AxSZ1IMP[njx][1])) .AND. (!Empty(AxSZ1IMP[njx][2])) .AND. (!Empty(AxSZ1IMP[njx][3])).AND. (!Empty(AxSZ1IMP[njx][4])) .AND. (!Empty(AxSZ1IMP[njx][5]))
+                If (!Empty(AxSZ1IMP[njx][1])) .AND. (!Empty(AxSZ1IMP[njx][2])) .AND. (!Empty(AxSZ1IMP[njx][3])).AND. (!Empty(CToD(AxSZ1IMP[njx][4]))) .AND. (!Empty(AxSZ1IMP[njx][5]))
                     
                     SZ1->(dbSetOrder(1))                // Ativa o Índice 1 da SZ1 (Z1_COD)
 
@@ -156,9 +156,9 @@ User Function TestesTI()
                     
                     MsUnlock() // Destrava o registro e confirma a gravação na tabela
                  
-                    Else 
+                Else 
                     nErros++ //Incrementa contador de erros e guarda a linha com erro para exibir no final do processo
-                        cLinhasErro += "- Registro " + cValToChar(njx)
+                    cLinhasErro += "- Registro " + cValToChar(njx)
                     If !Empty(AxSZ1IMP[njx][1])
                         cLinhasErro += " (Cód: " + AxSZ1IMP[njx][1] + ")"
                     EndIf
@@ -171,18 +171,29 @@ User Function TestesTI()
         
     End Transaction
     
-   // Alert("Sucesso! Processados " + cValToChar(nAtual-1) + " de " + cValToChar(qtdaux) + " registros encontrados no CSV.")
-    cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
-    cMsg += "Total de linhas no arquivo: " + cValToChar(qtdaux) + CRLF
-    cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
-    cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
-
-  cMsg += "Linhas não inseridas (erros): " + cValToChar(nErros) + CRLF
-    If nErros > 0
-        cMsg += CRLF + "Detalhamento das linhas com campos vazios:" + CRLF
-        cMsg += cLinhasErro
+    // Alert("Sucesso! Processados " + cValToChar(nAtual-1) + " de " + cValToChar(qtdaux) + " registros encontrados no CSV.")
+    
+    // SEPARAÇÃO DA RESPONSABILIDADE DAS CAIXAS DE MENSAGEM
+    If nErros == 0
+        // Monta mensagem de Sucesso (nenhum erro encontrado)
+        cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
+        cMsg += "Total de linhas no arquivo: " + cValToChar(qtdaux) + CRLF
+        cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
+        cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
+        
+        FWAlertSuccess(cMsg, "Resultado da Importação")
+    Else
+        // Monta mensagem de Erro / Inconsistência
+        cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
+        cMsg += "Linhas não inseridas (erros): " + cValToChar(nErros) + CRLF
+        
+        cMsg += CRLF + "As seguintes linhas não foram inseridas, verifique: " + CRLF
+        cMsg += cLinhasErro + CRLF
+        
+        cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF 
+        cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
+        
+        FWAlertWarning(cMsg, "Resultado da Importação (Aviso)")
     EndIf
-
-    FWAlertSuccess(cMsg, "Resultado da Importação")
 
 Return
