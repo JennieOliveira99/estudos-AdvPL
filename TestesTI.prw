@@ -138,8 +138,8 @@ User Function TestesTI()
                     Return
                 Else
                     // Verifica se o custo na SB2 é negativo
-                    If SB2->B2_CM1 < 0
-                        Alert("Produto " + cCodAux + " possui custo negativo (B2_CM1) na SB2. Processo interrompido.")
+                    If SB2->B2_QATU < 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual, 
+                        Alert("Produto " + cCodAux + " possui custo negativo (B2_VATU1) na SB2. Processo interrompido.")
                         DisarmTransaction()
                         Return
                     EndIf
