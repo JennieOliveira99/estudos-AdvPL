@@ -10,7 +10,7 @@ User Function TestesTI()
     Local aDados      := {}
     Local aLinha      := {}
     Local AxSZ1IMP    := {} // Guarda os produtos lidos do arquivo antes de gravar no BD
-    Local lcabok      := .F.
+    Local lcabok      := .F. // Flag para validar se o cabeçalho do arquivo está correto
     
     // Variáveis para mapear os campos
     Local lPrimLin    := .T.
@@ -26,7 +26,7 @@ User Function TestesTI()
     Local cCodAux     := ""
 
     // Abrir uma tela para escolher o arquivo.
-    cDiret := cGetFile('Arquivo CSV|*.csv| Arquivo TXT|*.txt| Arquivos XML|*.xml',; // Máscara e extensão dos arqv
+    cDiret := cGetFile('Arquivo CSV|*.csv| Arquivo TXT|*.txt| Arquivos XML|*.xml',; // Seleção de Arquivo: cGetFile, Armazena o caminho do arqv: cDiret   
                         'Selecao de Arquivos',;                                         // Titulo da janela
                         0,;                                                             // Filtro inicial
                         'C:\csv\',;                                                     // Pasta inicial
@@ -49,7 +49,7 @@ User Function TestesTI()
         
         IncProc('Lendo Arquivo texto...')               // Anda a barra de progresso
         
-        // Limpeza dos caracteres ocultos do LibreOffice
+        // Limpeza dos caracteres ocultos e quebras de linha do LibreOffice
         cLinha := FT_FREADLN()
         cLinha := StrTran(cLinha, Chr(13), "")
         cLinha := StrTran(cLinha, Chr(10), "")
@@ -64,9 +64,9 @@ User Function TestesTI()
         
         // Validação da primeira linha do arquivo
         IF lPrimLin                                         
-            aCampos := aLinha                           // Lê a segunda linha (Nome das colunas)
+            aCampos := aLinha                           // Lê a 1° linha (Nome das colunas)
             
-            // Conferindo se o nome de cada coluna está na ordem esperada
+            // Conferindo se o nome de cada coluna está na ordem esperada e removendo os espaços
             //aCampos  := Separa(FT_FREADLN(),";",.T.)  
             If (Len(aCampos) >= 5 .AND. ;
                 (AllTrim(aCampos[1]) == "COD") .AND. ; 
@@ -79,7 +79,7 @@ User Function TestesTI()
                 lcabok   := .T.                      // Liga a flag de cabeçalho ok.                        
                 // Validação do cabeçalho (Segunda linha do arquivo)
                 lcabok   := .F.                      // Desliga a flag, pois já validou o cabeçalho
-                FT_FSKIP()                             // Pula para a próxima linha (cabeçalho)    // Pula para a próxima linha (agora sim, os dados)
+                FT_FSKIP()                             // Pula para a próxima linha (cabeçalho)    
                 Loop
             Else
                 Alert("Cabeçalho da tabela não foi encontrado, indique no arquivo os campos: COD;DESC;QTDE;DATA;VALOR") 
@@ -115,7 +115,7 @@ User Function TestesTI()
         
         If qtdaux != 0                                    // Verifica se o array não está vazio
             
-            dbSelectArea("SZ1")                         // Aponta para a tabela SZ1
+            dbSelectArea("SZ1")                         // Define a SZ1 como ativa
             
             For njx := 1 to qtdaux                        // Loop por todos os itens guardados no array
                 
@@ -125,7 +125,8 @@ User Function TestesTI()
                 If (!Empty(AxSZ1IMP[njx][1])) .AND. (!Empty(AxSZ1IMP[njx][2])) .AND. (!Empty(AxSZ1IMP[njx][3])) 
                     
                     SZ1->(dbSetOrder(1))                // Ativa o Índice 1 da SZ1 (Z1_COD)
-                    
+
+                    // Ajusta o tamanho do código para o Dicionário (SX3) e evita repetição de código
                     cCodAux := Padr(AxSZ1IMP[njx][1], TamSX3("Z1_COD")[1])
 
                     // Busca no banco se o registro já existe (Código alinhado com o tamanho do dicionário)
@@ -136,7 +137,7 @@ User Function TestesTI()
                     Else
                         // Se NÃO ENCONTROU, trava para INCLUSÃO
                         Reclock("SZ1", .T.)
-                         nIncluidos++
+                        nIncluidos++
                     EndIf
                     
                     // Preenche os campos do banco com os dados do array
@@ -162,7 +163,7 @@ User Function TestesTI()
     End Transaction
     
    // Alert("Sucesso! Processados " + cValToChar(nAtual-1) + " de " + cValToChar(qtdaux) + " registros encontrados no CSV.")
-   cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
+    cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
     cMsg += "Total de linhas no arquivo: " + cValToChar(qtdaux) + CRLF
     cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
     cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
