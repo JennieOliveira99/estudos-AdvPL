@@ -66,9 +66,7 @@ User Function TestesTI()
         // Validação da primeira linha do arquivo
         IF lPrimLin
             aCampos := aLinha                           // Lê a 1° linha (Nome das colunas)
-
             // Conferindo se o nome de cada coluna está na ordem esperada e removendo os espaços
-
             If (Len(aCampos) >= 5 .AND. ;
                     (AllTrim(aCampos[1]) == "COD") .AND. ;
                     (AllTrim(aCampos[2]) == "DESC") .AND. ;
@@ -112,17 +110,41 @@ User Function TestesTI()
 
             dbSelectArea("SZ1")                         // Define a SZ1 como ativa
             SZ1->(dbSetOrder(1))                // Ativa o Índice 1 da SZ1 (Z1_COD)
+
+            
             For njx := 1 to qtdaux                        // Loop por todos os itens guardados no array
                 IncProc("Analisando e gravando registro " + cValToChar(nAtual) + " de " + cValToChar(qtdaux) + "...")
 
                 // Verifica se os campos não estão vazios
                 If (!Empty(AxSZ1IMP[njx][1])) .AND. (!Empty(AxSZ1IMP[njx][2])) .AND. (!Empty(AxSZ1IMP[njx][3])).AND. (!Empty(CToD(AxSZ1IMP[njx][4]))) .AND. (!Empty(AxSZ1IMP[njx][5]))
 
-
-
                     // Ajusta o tamanho do código para o Dicionário (SX3) e evita repetição de código
                     cCodAux := Padr(AxSZ1IMP[njx][1], TamSX3("Z1_COD")[1])
+                
+                //valida se existe na tabela SB1 e SB2 o produto que está sendo importado, caso não exista, interrompe o processo
+                dbSelectArea("SB1")
+                SB1->(dbSetOrder(1)) // Filial + Codigo
+                If !SB1->(DBSEEK(xFilial("SB1") + cCodAux))
+                    Alert("Produto " + cCodAux + " não cadastrado na tabela SB1. Processo interrompido.")
+                    DisarmTransaction()
+                    Return
+                EndIf
 
+                dbSelectArea("SB2")
+                SB2->(dbSetOrder(1)) // Filial + Codigo + Local
+                If !SB2->(DBSEEK(xFilial("SB2") + cCodAux))
+                    Alert("Produto " + cCodAux + " não encontrado na tabela SB2. Processo interrompido.")
+                    DisarmTransaction()
+                    Return
+                Else
+                    // Verifica se o custo na SB2 é negativo
+                    If SB2->B2_CM1 < 0
+                        Alert("Produto " + cCodAux + " possui custo negativo (B2_CM1) na SB2. Processo interrompido.")
+                        DisarmTransaction()
+                        Return
+                    EndIf
+                EndIf
+              
                     // Busca no banco se o registro já existe (Código alinhado com o tamanho do dicionário)
                     If SZ1->(DBSEEK(cCodAux))
                         // Se ENCONTROU, trava para ALTERAÇÃO
@@ -139,15 +161,10 @@ User Function TestesTI()
                     SZ1->Z1_COD    := cCodAux                       // Código
                     SZ1->Z1_DESC   := AxSZ1IMP[njx][2]              // Descrição
                     SZ1->Z1_QTDE   := Val(StrTran(AxSZ1IMP[njx][3], ",", ".")) // Converte para Número
-
-                    // Se data no CSV como AAAAMMDD contínuo (ex: 19990313), SToD()
-                    // Se data formato "13/03/1999", CToD()
                     SZ1->Z1_DATA   := CToD(AxSZ1IMP[njx][4])
-
                     SZ1->Z1_VALOR := Val(StrTran(AxSZ1IMP[njx][5], ",", ".")) //StrTran()substitui: a vírgula pelo ponto
 
                     MsUnlock() // Destrava o registro e confirma a gravação na tabela
-
 
                 Else
                     nErros++ //Incrementa contador de erros e guarda a linha com erro para exibir no final do processo
@@ -177,7 +194,7 @@ User Function TestesTI()
 
                     cLinhasErro += CRLF
                 EndIf
-                nAtual++                                // Incrementa o contador da régua
+                nAtual++  
             Next
         EndIf
 
