@@ -10,7 +10,7 @@ User Function TestesTI()
     Local aDados      := {}
     Local aLinha      := {}
     Local AxSZ1IMP    := {} // Guarda os produtos lidos do arquivo antes de gravar no BD
-    Local lcabok      := .F. // Flag para validar se o cabeçalho do arquivo está correto
+    //Local lcabok      := .F. // Flag para validar se o cabeçalho do arquivo está correto
     
     // Variáveis para mapear os campos
     Local lPrimLin    := .T.
@@ -20,6 +20,8 @@ User Function TestesTI()
 
     Local nIncluidos := 0
     Local nAlterados := 0
+    Local nErros     := 0
+    Local cLinhasErro:= ""
     Local cMsg := ""
 
     Local cLinha      := ""
@@ -76,9 +78,9 @@ User Function TestesTI()
                 (AllTrim(aCampos[5]) == "VALOR")) 
                 
                 lPrimLin := .F.                         // Desliga a flag de primeira linha.
-                lcabok   := .T.                      // Liga a flag de cabeçalho ok.                        
-                // Validação do cabeçalho (Segunda linha do arquivo)
-                lcabok   := .F.                      // Desliga a flag, pois já validou o cabeçalho
+             //   lcabok   := .T.                      // Liga a flag de cabeçalho ok.                        
+            // Validação do cabeçalho (Segunda linha do arquivo)
+             //   lcabok   := .F.                      // Desliga a flag, pois já validou o cabeçalho
                 FT_FSKIP()                             // Pula para a próxima linha (cabeçalho)    
                 Loop
             Else
@@ -121,8 +123,8 @@ User Function TestesTI()
                 
                 IncProc("Analisando e gravando registro " + cValToChar(nAtual) + " de " + cValToChar(qtdaux) + "...") 
 
-                // Verifica se Código, Descrição e Quantidade não estão vazios
-                If (!Empty(AxSZ1IMP[njx][1])) .AND. (!Empty(AxSZ1IMP[njx][2])) .AND. (!Empty(AxSZ1IMP[njx][3])) 
+                // Verifica se os campos não estão vazios
+                If (!Empty(AxSZ1IMP[njx][1])) .AND. (!Empty(AxSZ1IMP[njx][2])) .AND. (!Empty(AxSZ1IMP[njx][3])).AND. (!Empty(AxSZ1IMP[njx][4])) .AND. (!Empty(AxSZ1IMP[njx][5]))
                     
                     SZ1->(dbSetOrder(1))                // Ativa o Índice 1 da SZ1 (Z1_COD)
 
@@ -148,12 +150,19 @@ User Function TestesTI()
                     
                     // Se data no CSV como AAAAMMDD contínuo (ex: 19990313), SToD() 
                     // Se data formato "13/03/1999", CToD()
-                    SZ1->Z1_DATA   := CToD(AxSZ1IMP[njx][4])        
-                    
-                    //SZ1->Z1_VALOR  := Val(AxSZ1IMP[njx][5])         // val() Converte para Número
+                    SZ1->Z1_DATA   := CToD(AxSZ1IMP[njx][4]) 
+
                     SZ1->Z1_VALOR := Val(StrTran(AxSZ1IMP[njx][5], ",", ".")) //StrTran()substitui: a vírgula pelo ponto
                     
                     MsUnlock() // Destrava o registro e confirma a gravação na tabela
+                 
+                    Else 
+                    nErros++ //Incrementa contador de erros e guarda a linha com erro para exibir no final do processo
+                        cLinhasErro += "- Registro " + cValToChar(njx)
+                    If !Empty(AxSZ1IMP[njx][1])
+                        cLinhasErro += " (Cód: " + AxSZ1IMP[njx][1] + ")"
+                    EndIf
+                    cLinhasErro += CRLF
                 EndIf
                 
                 nAtual++                                // Incrementa o contador da régua
@@ -167,6 +176,12 @@ User Function TestesTI()
     cMsg += "Total de linhas no arquivo: " + cValToChar(qtdaux) + CRLF
     cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
     cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
+
+  cMsg += "Linhas não inseridas (erros): " + cValToChar(nErros) + CRLF
+    If nErros > 0
+        cMsg += CRLF + "Detalhamento das linhas com campos vazios:" + CRLF
+        cMsg += cLinhasErro
+    EndIf
 
     FWAlertSuccess(cMsg, "Resultado da Importação")
 
