@@ -2,14 +2,14 @@
 #include "protheus.ch"
 #include "TOPCONN.CH"
 
-User Function TestesTI()
+User Function ImpCSV()
 
     // Variáveis para ler o CSV
     Local cDiret
     Local aCampos     := {}
     Local aDados      := {}
     Local aLinha      := {}
-    Local AxSZ1IMP    := {} // Guarda os produtos lidos do arquivo antes de gravar no BD
+    Local AxZF1IMP    := {} // Guarda os produtos lidos do arquivo antes de gravar no BD
 
     // Variáveis para mapear os campos
     Local lPrimLin    := .T.
@@ -64,7 +64,7 @@ User Function TestesTI()
         aLinha := Separa(cLinha, ";", .T.)                // Lê a linha atual e fatia pelo delimitador ";"
 
         // Validação da primeira linha do arquivo
-        IF lPrimLin
+       IF lPrimLin
             aCampos := aLinha                           // Lê a 1° linha (Nome das colunas)
             // Conferindo se o nome de cada coluna está na ordem esperada e removendo os espaços
             If (Len(aCampos) >= 5 .AND. ;
@@ -90,7 +90,7 @@ User Function TestesTI()
 
         // -------- verifica se o array  tem os 5 itens esperados antes de gravá-lo no array de importação
         If Len(aDados) >= 5
-            Aadd(AxSZ1IMP, {AllTrim(aDados[1]), AllTrim(aDados[2]), AllTrim(aDados[3]), AllTrim(aDados[4]), AllTrim(aDados[5])})
+            Aadd(AxZF1IMP, {AllTrim(aDados[1]), AllTrim(aDados[2]), AllTrim(aDados[3]), AllTrim(aDados[4]), AllTrim(aDados[5])})
         EndIf
 
         FT_FSKIP()                                         // Move para a próxima linha do CSV
@@ -100,7 +100,7 @@ User Function TestesTI()
     FT_FUSE() // Libera/fecha o arquivo da memória após terminar a leitura
 
     // --------------Grava no BD
-    qtdaux := Len(AxSZ1IMP) // Guarda a quantidade total de registros lidos
+    qtdaux := Len(AxZF1IMP) // Guarda a quantidade total de registros lidos
 
     ProcRegua(qtdaux)                                    // Inicia o processo da Regua de gravação
 
@@ -108,19 +108,19 @@ User Function TestesTI()
 
         If qtdaux != 0                                    // Verifica se o array não está vazio
 
-            dbSelectArea("SZ1")                         // Define a SZ1 como ativa
-            SZ1->(dbSetOrder(1))                // Ativa o Índice 1 da SZ1 (Z1_COD)
-
+            dbSelectArea("ZF1")                         // Define a ZF1 como ativa
+            ZF1->(dbSetOrder(1))                // Ativa o Índice 1 da ZF1 (ZF1_COD)           
             
             For njx := 1 to qtdaux                        // Loop por todos os itens guardados no array
                 IncProc("Analisando e gravando registro " + cValToChar(nAtual) + " de " + cValToChar(qtdaux) + "...")
 
                 // Verifica se os campos não estão vazios
-                If (!Empty(AxSZ1IMP[njx][1])) .AND. (!Empty(AxSZ1IMP[njx][2])) .AND. (!Empty(AxSZ1IMP[njx][3])).AND. (!Empty(CToD(AxSZ1IMP[njx][4]))) .AND. (!Empty(AxSZ1IMP[njx][5]))
+                If (!Empty(AxZF1IMP[njx][1])) .AND. (!Empty(AxZF1IMP[njx][2])) .AND. (!Empty(AxZF1IMP[njx][3])) .AND. (!Empty(CToD(AxZF1IMP[njx][4]))) .AND. (!Empty(AxZF1IMP[njx][5]))
+                ZF1->(dbSetOrder(1))
 
                     // Ajusta o tamanho do código para o Dicionário (SX3) e evita repetição de código
-                    cCodAux := Padr(AxSZ1IMP[njx][1], TamSX3("Z1_COD")[1])
-                
+                   cCodAux := Padr(AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1])
+               
                 //valida se existe na tabela SB1 e SB2 o produto que está sendo importado, caso não exista, interrompe o processo
                 dbSelectArea("SB1")
                 SB1->(dbSetOrder(1)) // Filial + Codigo
@@ -138,31 +138,37 @@ User Function TestesTI()
                     Return
                 Else
                     // Verifica se o custo na SB2 é negativo
-                    If SB2->B2_QATU < 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual, 
+                    If SB2->B2_VATU1 > 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual, 
                         Alert("Produto " + cCodAux + " possui custo negativo (B2_VATU1) na SB2. Processo interrompido.")
                         DisarmTransaction()
                         Return
                     EndIf
                 EndIf
-              
-                    // Busca no banco se o registro já existe (Código alinhado com o tamanho do dicionário)
-                    If SZ1->(DBSEEK(cCodAux))
+
+
+              dbSelectArea("ZF1")
+              ZF1->(dbSetOrder(1)) 
+             // Busca no banco se o registro já existe 
+       
+                //If ZF1->(DBSEEK(cCodAux))
+                //If ZF1->(DBSEEK(xFilial("ZF1") + cCodAux))
+                 If ZF1->(DBSEEK(xFilial("ZF1") + AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1]))
                         // Se ENCONTROU, trava para ALTERAÇÃO
-                        Reclock("SZ1", .F.)
+                        Reclock("ZF1", .F.)
                         nAlterados++
                     Else
                         // Se NÃO ENCONTROU, trava para INCLUSÃO
-                        Reclock("SZ1", .T.)
+                        Reclock("ZF1", .T.)
                         nIncluidos++
                     EndIf
 
                     // Preenche os campos do banco com os dados do array
-                    SZ1->Z1_FILIAL := xFilial("SZ1")                // Pega a filial corrente do sistema
-                    SZ1->Z1_COD    := cCodAux                       // Código
-                    SZ1->Z1_DESC   := AxSZ1IMP[njx][2]              // Descrição
-                    SZ1->Z1_QTDE   := Val(StrTran(AxSZ1IMP[njx][3], ",", ".")) // Converte para Número
-                    SZ1->Z1_DATA   := CToD(AxSZ1IMP[njx][4])
-                    SZ1->Z1_VALOR := Val(StrTran(AxSZ1IMP[njx][5], ",", ".")) //StrTran()substitui: a vírgula pelo ponto
+                    ZF1->ZF1_FILIAL := xFilial("ZF1")                // Pega a filial corrente do sistema
+                    ZF1->ZF1_COD    := cCodAux                       // Código
+                    ZF1->ZF1_DESC   := AxZF1IMP[njx][2]              // Descrição
+                    ZF1->ZF1_QTDE   := Val(StrTran(AxZF1IMP[njx][3], ",", ".")) // Converte para Número
+                    ZF1->ZF1_DATA   := CToD(AxZF1IMP[njx][4])
+                    ZF1->ZF1_VALOR := Val(StrTran(AxZF1IMP[njx][5], ",", ".")) //StrTran()substitui: a vírgula pelo ponto
 
                     MsUnlock() // Destrava o registro e confirma a gravação na tabela
 
@@ -170,25 +176,25 @@ User Function TestesTI()
                     nErros++ //Incrementa contador de erros e guarda a linha com erro para exibir no final do processo
                     cLinhasErro += "Registro " + cValToChar(njx)+ ": "
 
-                    If !Empty(AxSZ1IMP[njx][1])
-                        cLinhasErro +=  (AxSZ1IMP[njx][1])  + " "
+                    If !Empty(AxZF1IMP[njx][1])
+                        cLinhasErro +=  (AxZF1IMP[njx][1])  + " "
                     EndIf
 
                     // Validação detalhada para identificar qual campo está vazio ou inválido
 
-                    If Empty(AxSZ1IMP[njx][1])
+                    If Empty(AxZF1IMP[njx][1])
                         cLinhasErro += "Código não informado "
                     EndIf
-                    If Empty(AxSZ1IMP[njx][2])
+                    If Empty(AxZF1IMP[njx][2])
                         cLinhasErro += "Descrição não informada "
                     EndIf
-                    If Empty(AxSZ1IMP[njx][3])
+                    If Empty(AxZF1IMP[njx][3])
                         cLinhasErro += "Quantidade não informada "
                     EndIf
-                    If Empty(CToD(AxSZ1IMP[njx][4]))
+                    If Empty(CToD(AxZF1IMP[njx][4]))
                         cLinhasErro += "Data inválida ou não informada "
                     EndIf
-                    If Empty(AxSZ1IMP[njx][5])
+                    If Empty(AxZF1IMP[njx][5])
                         cLinhasErro += "Valor não informado "
                     EndIf
 
