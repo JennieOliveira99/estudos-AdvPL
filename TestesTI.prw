@@ -122,38 +122,41 @@ User Function ImpCSV()
                    cCodAux := Padr(AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1])
                
                 //valida se existe na tabela SB1 e SB2 o produto que está sendo importado, caso não exista, interrompe o processo
-                dbSelectArea("SB1")
-                SB1->(dbSetOrder(1)) // Filial + Codigo
-                If !SB1->(DBSEEK(xFilial("SB1") + cCodAux))
-                    Alert("Produto " + cCodAux + " não cadastrado na tabela SB1. Processo interrompido.")
-                    DisarmTransaction()
-                    Return
-                EndIf
+                // dbSelectArea("SB1")
+                // SB1->(dbSetOrder(1)) // Filial + Codigo
+                // If !SB1->(DBSEEK(xFilial("SB1") + cCodAux))
+                //     Alert("Produto " + cCodAux + " não cadastrado na tabela SB1. Processo interrompido.")
+                //     DisarmTransaction()
+                //     Return
+                // EndIf
 
-                dbSelectArea("SB2")
-                SB2->(dbSetOrder(1)) // Filial + Codigo + Local
-                If !SB2->(DBSEEK(xFilial("SB2") + cCodAux))
-                    Alert("Produto " + cCodAux + " não encontrado na tabela SB2. Processo interrompido.")
-                    DisarmTransaction()
-                    Return
-                Else
-                    // Verifica se o custo na SB2 é negativo
-                    If SB2->B2_VATU1 > 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual, 
-                        Alert("Produto " + cCodAux + " possui custo negativo (B2_VATU1) na SB2. Processo interrompido.")
-                        DisarmTransaction()
-                        Return
-                    EndIf
-                EndIf
+                // dbSelectArea("SB2")
+                // SB2->(dbSetOrder(1)) // Filial + Codigo + Local
+                // If !SB2->(DBSEEK(xFilial("SB2") + cCodAux))
+                //     Alert("Produto " + cCodAux + " não encontrado na tabela SB2. Processo interrompido.")
+                //     DisarmTransaction()
+                //     Return
+                // Else
+                //     // Verifica se o custo na SB2 é negativo
+                //     If SB2->B2_VATU1 <= 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual, 
+                //         Alert("Produto " + cCodAux + " possui custo negativo (B2_VATU1) na SB2. Processo interrompido.")
+                //       //  DisarmTransaction()
+                //         //Return
+                //     EndIf
+                // EndIf
 
 
-              dbSelectArea("ZF1")
-              ZF1->(dbSetOrder(1)) 
-             // Busca no banco se o registro já existe 
+                    // Busca no banco se o registro já existe 
        
-                //If ZF1->(DBSEEK(cCodAux))
+           //If ZF1->(DBSEEK(cCodAux))
                 //If ZF1->(DBSEEK(xFilial("ZF1") + cCodAux))
-                 If ZF1->(DBSEEK(xFilial("ZF1") + AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1]))
+               //  If ZF1->(DBSEEK(xFilial("ZF1") + AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1]))
                         // Se ENCONTROU, trava para ALTERAÇÃO
+
+                        //Seleciona e posiciona a ZF1 para verificar se o registro JÁ EXISTE na ZF1
+                        dbSelectArea("ZF1")
+                        ZF1->(dbSetOrder(1))// ZF1_FILIAL + ZF1_COD
+                          If ZF1->(DBSEEK(xFilial("ZF1") + cCodAux)) //Passando COD e filial
                         Reclock("ZF1", .F.)
                         nAlterados++
                     Else
