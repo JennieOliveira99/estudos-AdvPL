@@ -26,6 +26,14 @@ User Function ImpCSV()
     Local cLinha      := ""
     Local cCodAux     := ""
 
+    // Captura do ambiente original (compatível com versões antigas)
+    Local cEmpAnt := GetMV("EMPRESA")
+    Local cFilAnt := GetMV("FILIAL")
+    // Empresas a serem processadas
+    Local aEmpresas := {"01", "03"}
+    Local cEmpAtual := ""
+    Local i := 0
+
     // Abrir uma tela para escolher o arquivo.
     cDiret := cGetFile('Arquivo CSV|*.csv| Arquivo TXT|*.txt| Arquivos XML|*.xml',; // Seleção de Arquivo: cGetFile, Armazena o caminho do arqv: cDiret
         'Selecao de Arquivos',;                                         // Titulo da janela
@@ -64,7 +72,7 @@ User Function ImpCSV()
         aLinha := Separa(cLinha, ";", .T.)                // Lê a linha atual e fatia pelo delimitador ";"
 
         // Validação da primeira linha do arquivo
-       IF lPrimLin
+        IF lPrimLin
             aCampos := aLinha                           // Lê a 1° linha (Nome das colunas)
             // Conferindo se o nome de cada coluna está na ordem esperada e removendo os espaços
             If (Len(aCampos) >= 5 .AND. ;
@@ -102,112 +110,122 @@ User Function ImpCSV()
     // --------------Grava no BD
     qtdaux := Len(AxZF1IMP) // Guarda a quantidade total de registros lidos
 
-    ProcRegua(qtdaux)                                    // Inicia o processo da Regua de gravação
+    // Régua ajustada para processar duas vezes (empresa 01 e 03)
+    ProcRegua(qtdaux * 2)   //loop será executado duas vezes (empresas 01 e 03)
 
     Begin Transaction                                     // Abre transação com o BD para garantir integridade
 
         If qtdaux != 0                                    // Verifica se o array não está vazio
 
-            dbSelectArea("ZF1")                         // Define a ZF1 como ativa
-            ZF1->(dbSetOrder(1))                // Ativa o Índice 1 da ZF1 (ZF1_COD)           
-            
-            For njx := 1 to qtdaux                        // Loop por todos os itens guardados no array
-                IncProc("Analisando e gravando registro " + cValToChar(nAtual) + " de " + cValToChar(qtdaux) + "...")
+            For i := 1 to Len(aEmpresas)                 // Loop por todas as empresas definidas no array
+                cEmpAtual := aEmpresas[i]
 
-                // Verifica se os campos não estão vazios
-                If (!Empty(AxZF1IMP[njx][1])) .AND. (!Empty(AxZF1IMP[njx][2])) .AND. (!Empty(AxZF1IMP[njx][3])) .AND. (!Empty(CToD(AxZF1IMP[njx][4]))) .AND. (!Empty(AxZF1IMP[njx][5]))
-                ZF1->(dbSetOrder(1))
+                // Define o ambiente para a empresa atual (mantém a filial original)
+                RpcSetEnv(cEmpAtual, cFilAnt)
 
-                    // Ajusta o tamanho do código para o Dicionário (SX3) e evita repetição de código
-                   cCodAux := Padr(AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1])
-               
-                //valida se existe na tabela SB1 e SB2 o produto que está sendo importado, caso não exista, interrompe o processo
-                // dbSelectArea("SB1")
-                // SB1->(dbSetOrder(1)) // Filial + Codigo
-                // If !SB1->(DBSEEK(xFilial("SB1") + cCodAux))
-                //     Alert("Produto " + cCodAux + " não cadastrado na tabela SB1. Processo interrompido.")
-                //     DisarmTransaction()
-                //     Return
-                // EndIf
+                dbSelectArea("ZF1")                         // Define a ZF1 como ativa
+                ZF1->(dbSetOrder(1))                // Ativa o Índice 1 da ZF1 (ZF1_COD)
 
-                // dbSelectArea("SB2")
-                // SB2->(dbSetOrder(1)) // Filial + Codigo + Local
-                // If !SB2->(DBSEEK(xFilial("SB2") + cCodAux))
-                //     Alert("Produto " + cCodAux + " não encontrado na tabela SB2. Processo interrompido.")
-                //     DisarmTransaction()
-                //     Return
-                // Else
-                //     // Verifica se o custo na SB2 é negativo
-                //     If SB2->B2_VATU1 <= 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual, 
-                //         Alert("Produto " + cCodAux + " possui custo negativo (B2_VATU1) na SB2. Processo interrompido.")
-                //       //  DisarmTransaction()
-                //         //Return
-                //     EndIf
-                // EndIf
+                For njx := 1 to qtdaux                        // Loop por todos os itens guardados no array
+                    IncProc("Analisando e gravando registro " + cValToChar(nAtual) + " de " + cValToChar(qtdaux) + "...")
 
+                    // Verifica se os campos não estão vazios
+                    If (!Empty(AxZF1IMP[njx][1])) .AND. (!Empty(AxZF1IMP[njx][2])) .AND. (!Empty(AxZF1IMP[njx][3])) .AND. (!Empty(CToD(AxZF1IMP[njx][4]))) .AND. (!Empty(AxZF1IMP[njx][5]))
+                        ZF1->(dbSetOrder(1))
 
-                    // Busca no banco se o registro já existe 
-       
-           //If ZF1->(DBSEEK(cCodAux))
-                //If ZF1->(DBSEEK(xFilial("ZF1") + cCodAux))
-               //  If ZF1->(DBSEEK(xFilial("ZF1") + AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1]))
+                        // Ajusta o tamanho do código para o Dicionário (SX3) e evita repetição de código
+                        cCodAux := Padr(AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1])
+
+                        //valida se existe na tabela SB1 e SB2 o produto que está sendo importado, caso não exista, interrompe o processo
+                        // dbSelectArea("SB1")
+                        // SB1->(dbSetOrder(1)) // Filial + Codigo
+                        // If !SB1->(DBSEEK(xFilial("SB1") + cCodAux))
+                        //     Alert("Produto " + cCodAux + " não cadastrado na tabela SB1. Processo interrompido.")
+                        //     DisarmTransaction()
+                        //     Return
+                        // EndIf
+
+                        dbSelectArea("SB2")
+                        SB2->(dbSetOrder(1)) // Filial + Codigo + Local
+                        If !SB2->(DBSEEK(xFilial("SB2") + cCodAux))
+                            Alert("Produto " + cCodAux + " não encontrado na tabela SB2. Processo interrompido.")
+                            DisarmTransaction()
+                            Return
+                        Else
+                        //     // Verifica se o custo na SB2 é negativo
+                            If SB2->B2_VATU1 <= 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual,
+                                Alert("Produto " + cCodAux + " possui custo negativo (B2_VATU1) na SB2. Processo interrompido.")
+                              //  DisarmTransaction()
+                                //Return
+                            EndIf
+                        EndIf
+
+                        // Busca no banco se o registro já existe
+                        //If ZF1->(DBSEEK(cCodAux))
+                        //If ZF1->(DBSEEK(xFilial("ZF1") + cCodAux))
+                        //  If ZF1->(DBSEEK(xFilial("ZF1") + AllTrim(AxZF1IMP[njx][1]), TamSX3("ZF1_COD")[1]))
                         // Se ENCONTROU, trava para ALTERAÇÃO
 
                         //Seleciona e posiciona a ZF1 para verificar se o registro JÁ EXISTE na ZF1
                         dbSelectArea("ZF1")
                         ZF1->(dbSetOrder(1))// ZF1_FILIAL + ZF1_COD
-                          If ZF1->(DBSEEK(xFilial("ZF1") + cCodAux)) //Passando COD e filial
-                        Reclock("ZF1", .F.)
-                        nAlterados++
+                        If ZF1->(DBSEEK(xFilial("ZF1") + cCodAux)) //Passando COD e filial
+                            Reclock("ZF1", .F.)
+                            nAlterados++
+                        Else
+                            // Se NÃO ENCONTROU, trava para INCLUSÃO
+                            Reclock("ZF1", .T.)
+                            nIncluidos++
+                        EndIf
+
+                        // Preenche os campos do banco com os dados do array
+                        ZF1->ZF1_FILIAL := xFilial("ZF1")                // Pega a filial corrente do sistema
+                        ZF1->ZF1_COD    := cCodAux                       // Código
+                        ZF1->ZF1_DESC   := AxZF1IMP[njx][2]              // Descrição
+                        ZF1->ZF1_QTDE   := Val(StrTran(AxZF1IMP[njx][3], ",", ".")) // Converte para Número
+                        ZF1->ZF1_DATA   := CToD(AxZF1IMP[njx][4])
+                        ZF1->ZF1_VALOR := Val(StrTran(AxZF1IMP[njx][5], ",", ".")) //StrTran()substitui: a vírgula pelo ponto
+
+                        MsUnlock() // Destrava o registro e confirma a gravação na tabela
+
                     Else
-                        // Se NÃO ENCONTROU, trava para INCLUSÃO
-                        Reclock("ZF1", .T.)
-                        nIncluidos++
-                    EndIf
+                        nErros++ //Incrementa contador de erros e guarda a linha com erro para exibir no final do processo
+                        cLinhasErro += "Registro " + cValToChar(njx)+ ": "
 
-                    // Preenche os campos do banco com os dados do array
-                    ZF1->ZF1_FILIAL := xFilial("ZF1")                // Pega a filial corrente do sistema
-                    ZF1->ZF1_COD    := cCodAux                       // Código
-                    ZF1->ZF1_DESC   := AxZF1IMP[njx][2]              // Descrição
-                    ZF1->ZF1_QTDE   := Val(StrTran(AxZF1IMP[njx][3], ",", ".")) // Converte para Número
-                    ZF1->ZF1_DATA   := CToD(AxZF1IMP[njx][4])
-                    ZF1->ZF1_VALOR := Val(StrTran(AxZF1IMP[njx][5], ",", ".")) //StrTran()substitui: a vírgula pelo ponto
+                        If !Empty(AxZF1IMP[njx][1])
+                            cLinhasErro +=  (AxZF1IMP[njx][1])  + " "
+                        EndIf
 
-                    MsUnlock() // Destrava o registro e confirma a gravação na tabela
+                        // Validação detalhada para identificar qual campo está vazio ou inválido
+                        If Empty(AxZF1IMP[njx][1])
+                            cLinhasErro += "Código não informado "
+                        EndIf
+                        If Empty(AxZF1IMP[njx][2])
+                            cLinhasErro += "Descrição não informada "
+                        EndIf
+                        If Empty(AxZF1IMP[njx][3])
+                            cLinhasErro += "Quantidade não informada "
+                        EndIf
+                        If Empty(CToD(AxZF1IMP[njx][4]))
+                            cLinhasErro += "Data inválida ou não informada "
+                        EndIf
+                        If Empty(AxZF1IMP[njx][5])
+                            cLinhasErro += "Valor não informado "
+                        EndIf
 
-                Else
-                    nErros++ //Incrementa contador de erros e guarda a linha com erro para exibir no final do processo
-                    cLinhasErro += "Registro " + cValToChar(njx)+ ": "
+                        cLinhasErro += CRLF
+                    EndIf
+                    nAtual++
+                Next
 
-                    If !Empty(AxZF1IMP[njx][1])
-                        cLinhasErro +=  (AxZF1IMP[njx][1])  + " "
-                    EndIf
+            Next // Fim do For (empresas)
 
-                    // Validação detalhada para identificar qual campo está vazio ou inválido
-
-                    If Empty(AxZF1IMP[njx][1])
-                        cLinhasErro += "Código não informado "
-                    EndIf
-                    If Empty(AxZF1IMP[njx][2])
-                        cLinhasErro += "Descrição não informada "
-                    EndIf
-                    If Empty(AxZF1IMP[njx][3])
-                        cLinhasErro += "Quantidade não informada "
-                    EndIf
-                    If Empty(CToD(AxZF1IMP[njx][4]))
-                        cLinhasErro += "Data inválida ou não informada "
-                    EndIf
-                    If Empty(AxZF1IMP[njx][5])
-                        cLinhasErro += "Valor não informado "
-                    EndIf
-
-                    cLinhasErro += CRLF
-                EndIf
-                nAtual++  
-            Next
         EndIf
 
     End Transaction
+
+    // Restaura o ambiente original
+    RpcSetEnv(cEmpAnt, cFilAnt)
 
     If nErros == 0
         // Monta mensagem de Sucesso (nenhum erro encontrado)
