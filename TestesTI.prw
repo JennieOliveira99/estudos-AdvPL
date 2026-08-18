@@ -27,7 +27,7 @@ User Function ImpCSV()
     Local cCodAux     := ""
 
     // Captura do ambiente original (compatível com versões antigas)
-    Local cEmpAnt := GetMV("EMPRESA")
+    Local cEmpAnt := GetMV("EMPRESA") // GetMv busca e retorna o valor de um parâmetro cadastrado na SX6 parametros
     Local cFilAnt := GetMV("FILIAL")
     // Empresas a serem processadas
     Local aEmpresas := {"01", "03"}
@@ -117,6 +117,8 @@ User Function ImpCSV()
 
         If qtdaux != 0                                    // Verifica se o array não está vazio
 
+//Loop que atribui a empresa atual à variável cEmpAtual,
+// e chama RpcSetEnv para trocar o ambiente para essa empresa, mantendo a filial original
             For i := 1 to Len(aEmpresas)                 // Loop por todas as empresas definidas no array
                 cEmpAtual := aEmpresas[i]
 
@@ -145,20 +147,20 @@ User Function ImpCSV()
                         //     Return
                         // EndIf
 
-                        dbSelectArea("SB2")
-                        SB2->(dbSetOrder(1)) // Filial + Codigo + Local
-                        If !SB2->(DBSEEK(xFilial("SB2") + cCodAux))
-                            Alert("Produto " + cCodAux + " não encontrado na tabela SB2. Processo interrompido.")
-                            DisarmTransaction()
-                            Return
-                        Else
-                        //     // Verifica se o custo na SB2 é negativo
-                            If SB2->B2_VATU1 <= 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual,
-                                Alert("Produto " + cCodAux + " possui custo negativo (B2_VATU1) na SB2. Processo interrompido.")
-                              //  DisarmTransaction()
-                                //Return
-                            EndIf
-                        EndIf
+                        // dbSelectArea("SB2")
+                        // SB2->(dbSetOrder(1)) // Filial + Codigo + Local
+                        // If !SB2->(DBSEEK(xFilial("SB2") + cCodAux))
+                        //     Alert("Produto " + cCodAux + " não encontrado na tabela SB2. Processo interrompido.")
+                        //     DisarmTransaction()
+                        //     Return
+                        // Else
+                        // //     // Verifica se o custo na SB2 é negativo
+                        //     If SB2->B2_VATU1 <= 0 //B2_QATU - saldo atual, B2_VATU1 - valor atual,
+                        //         Alert("Produto " + cCodAux + " possui custo negativo (B2_VATU1) na SB2. Processo interrompido.")
+                        //       //  DisarmTransaction()
+                        //         //Return
+                        //     EndIf
+                        // EndIf
 
                         // Busca no banco se o registro já existe
                         //If ZF1->(DBSEEK(cCodAux))
