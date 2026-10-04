@@ -1,0 +1,24 @@
+considerações: empresa 1 e 3 visualizam os dados da tabela 
+os dados sao armazenados na ZF1(ZF1 compartilhada)
+Se importar o csv na empresa 1 tem que gravar na ZF1 e se importar na empresa 3 tem que armazenar na mesma
+A ideia é brincar com tabela compartilhada x esclusiva com empresas diferentes
+preciso olhar essa tabela no protheus
+verificar campos ao gravar 
+preciso implementar axcadastro
+O principal é entender o conceito de compartilhamento inclusive sobre os menus ue tenho que criar 1 só e mostrar nas duas
+sera que o foco esta sendo so o codigo e pouco o protheus?
+O que fiz: criei ZF1 na empresa 1 e se tornou ZF1010
+depois criei ZF1 na empresa 3 e se tornou ZF1030 - ela nao deveria existir 
+a ZF1 sendo totalmente compartilhada mostra seus dados para qualquer empresa, 3, 4 etc
+Quando a tabela é compartilhada por empresa a filial  nao participa certo? entao na teoria isso diz que:
+o campo filial é gravado vazio?
+no codigo o campo filial nao deveria existir?
+a cave filial + cod nao funciona?
+e o que essas caracteristicas causariam caso supostamente deixasse de ser compartilhada por empresa e se tornasse exclusiva? 
+se o protheus procura o alias conforme a empresa, tem que remover toda e qualquer menção a zf1030?
+pelo que entendi: exclusiva por empresa: empresa 03 nunca verá os registros da 01
+supostamente, se remover o indice filial:
+cod fará com que a 03 exerga a 01?
+Isso segrega elas?
+Quais remoções fazer?
+como olhar os campo - gravados - ao gravar na versao totalmente compartilhada?  
