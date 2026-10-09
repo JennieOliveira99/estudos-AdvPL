@@ -16,21 +16,25 @@ User Function TelaCSV()
     oBrowse := FWMBrowse() :New()
     oBrowse:SetAlias("ZF1")
     oBrowse:SetDescription(cCadastro)
-    oBrowse:DisableDetails()
 
     //Add legendas
-    oBrowse:AddLegend("ZF1->ZF1_STATUS == 'A'", "GREEN" , "Ativo")
-    oBrowse:AddLegend("ZF1->ZF1_STATUS == 'I'", "RED"   , "Inativo")
-    oBrowse:AddLegend("ZF1->ZF1_STATUS == 'D'", "YELLOW", "Desativado")
+    
+oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '1'", "GREEN", "Ativo (OK)")
+oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '2'", "RED", "Inativo")
+// $ procura um caractere dentro da string - procura 1 e 2
+oBrowse:AddLegend("!(AllTrim(ZF1->ZF1_STATUS) $ '12')", "PINK", "Inválido")
 
     // Seleciona a área e índice padrão
     DbSelectArea("ZF1")
     ZF1->(DbSetOrder(1))
+   // oBrowse:DisableDetails()
 
     // Ativa o Browse
     oBrowse:Activate()
     FWRestArea(aArea)
-Return Nil
+
+Return 
+
 Static Function MenuDef()
     Local aRotina := {}
 
@@ -41,9 +45,19 @@ Static Function MenuDef()
     aAdd(aRotina, {"Alterar", "AXALTERA", 0, 4})
     aAdd(aRotina, {"Excluir", "AXDELETA", 0, 5})
     aAdd(aRotina, {"Importar CSV", "U_ImpCSV", 0, 6})
-
-
+    aAdd(aRotina, {"Legenda", "U_AXLEGENDA", 0, 7})
+    
 Return aRotina
+
+User Function AXLEGENDA()
+    Local aLegenda := {}
+
+    aAdd(aLegenda, {"BR_VERDE",    "Ativo"})  
+    aAdd(aLegenda, {"BR_VERMELHO", "Inativo"})      
+    aAdd(aLegenda, {"BR_PINK",     "Inválido"})    
+
+    BrwLegenda("Legenda", "Legenda dos Registros", aLegenda)
+Return
 
 User Function ImpCSV()
 
