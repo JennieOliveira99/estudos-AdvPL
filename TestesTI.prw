@@ -19,7 +19,7 @@ User Function TelaCSV()
 
     //Add legendas
     
-oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '1'", "GREEN", "Ativo (OK)")
+oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '1'", "GREEN", "Ativo")
 oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '2'", "RED", "Inativo")
 // $ procura um caractere dentro da string - procura 1 e 2
 oBrowse:AddLegend("!(AllTrim(ZF1->ZF1_STATUS) $ '12')", "PINK", "Inválido")
@@ -27,13 +27,23 @@ oBrowse:AddLegend("!(AllTrim(ZF1->ZF1_STATUS) $ '12')", "PINK", "Inválido")
     // Seleciona a área e índice padrão
     DbSelectArea("ZF1")
     ZF1->(DbSetOrder(1))
-   // oBrowse:DisableDetails()
+   
 
     // Ativa o Browse
     oBrowse:Activate()
     FWRestArea(aArea)
 
 Return 
+
+User Function AXLEGENDA()
+    Local aLegenda := {}
+
+    aAdd(aLegenda, {"BR_VERDE",    "Ativo"})  
+    aAdd(aLegenda, {"BR_VERMELHO", "Inativo"})      
+    aAdd(aLegenda, {"BR_PINK",     "Inválido"})    
+
+    BrwLegenda("Legenda", "Legenda dos Registros", aLegenda)
+Return
 
 Static Function MenuDef()
     Local aRotina := {}
@@ -45,19 +55,9 @@ Static Function MenuDef()
     aAdd(aRotina, {"Alterar", "AXALTERA", 0, 4})
     aAdd(aRotina, {"Excluir", "AXDELETA", 0, 5})
     aAdd(aRotina, {"Importar CSV", "U_ImpCSV", 0, 6})
-    aAdd(aRotina, {"Legenda", "U_AXLEGENDA", 0, 7})
+    aAdd(aRotina, {"Legenda", "U_AXLEGENDA", 0, 7}) // U_ para chamar user function
     
 Return aRotina
-
-User Function AXLEGENDA()
-    Local aLegenda := {}
-
-    aAdd(aLegenda, {"BR_VERDE",    "Ativo"})  
-    aAdd(aLegenda, {"BR_VERMELHO", "Inativo"})      
-    aAdd(aLegenda, {"BR_PINK",     "Inválido"})    
-
-    BrwLegenda("Legenda", "Legenda dos Registros", aLegenda)
-Return
 
 User Function ImpCSV()
 
@@ -146,7 +146,7 @@ User Function ImpCSV()
         // Leitura dos dados a partir da terceira linha
         aDados := aLinha
 
-        // -------- verifica se o array  tem os 5 itens esperados antes de gravá-lo no array de importação
+        // -------- verifica se o array  tem os 6 itens esperados antes de gravá-lo no array de importação
         If Len(aDados) >= 6
             Aadd(AxZF1IMP, {AllTrim(aDados[1]), AllTrim(aDados[2]), AllTrim(aDados[3]), AllTrim(aDados[4]), AllTrim(aDados[5]), AllTrim(aDados[6])})
         EndIf
