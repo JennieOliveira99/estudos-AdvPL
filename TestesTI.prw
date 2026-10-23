@@ -137,7 +137,7 @@ User Function ImpCSV()
                 FT_FSKIP()                             // Pula para a próxima linha (cabeçalho)
                 Loop
             Else
-                Alert("Cabeçalho da tabela não foi encontrado, indique no arquivo os campos: COD;DESC;QTDE;DATA;VALOR")
+                Alert("Cabeçalho da tabela não foi encontrado, indique no arquivo os campos: COD;DESC;QTDE;DATA;VALOR;STATUS")
                 FT_FUSE() // Fecha o arquivo
                 Return
             Endif
@@ -299,7 +299,7 @@ User Function ImpCSV()
     End Transaction
 
     If nErros == 0
-        cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
+       // cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
         cMsg += "Total de linhas no arquivo: " + cValToChar(qtdaux) + CRLF
         cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
         cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
@@ -307,10 +307,10 @@ User Function ImpCSV()
 
         FWAlertSuccess(cMsg, "Resultado da Importação")
     Else
-        cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
+       // cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
         cMsg += "Linhas não inseridas (erros): " + cValToChar(nErros) + CRLF
 
-        cMsg += CRLF + "As seguintes linhas não foram inseridas, verifique: " + CRLF
+      //  cMsg += CRLF + "As seguintes linhas não foram inseridas, verifique: " + CRLF
         cMsg += cLinhasErro + CRLF
 
         cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
