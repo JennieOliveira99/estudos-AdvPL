@@ -25,7 +25,7 @@ User Function TelaCSV()
     oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '1'", "GREEN", "Ativo")
     oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '2'", "RED", "Inativo")
     // $ procura um caractere dentro da string - procura 1 e 2
-    oBrowse:AddLegend("!(AllTrim(ZF1->ZF1_STATUS) $ '12')", "PINK", "Inválido")
+    oBrowse:AddLegend((AllTrim(ZF1->ZF1_STATUS) != '1') .And. (AllTrim(ZF1->ZF1_STATUS) != '2'), "PINK", "Inválido")
 
     // Seleciona a área e índice padrão
     DbSelectArea("ZF1")
