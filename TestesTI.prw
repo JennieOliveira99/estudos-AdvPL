@@ -1,16 +1,12 @@
 #include "totvs.ch"
 #include "protheus.ch"
 #include "TOPCONN.CH"
-#include "fwmvcdef.ch"
-
-aErrosImp := {}
 
 User Function TelaCSV()
     Local aArea := FWGetArea()
     Local oBrowse
     Private aRotina := {}
     Private cCadastro := "Importação de Registros CSV"
-    Private aErrosImp := {}
 
     //Definição do Menu
     aRotina := MenuDef()
@@ -21,70 +17,47 @@ User Function TelaCSV()
     oBrowse:SetDescription(cCadastro)
 
     //Add legendas
-
-    oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '1'", "GREEN", "Ativo")
-    oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '2'", "RED", "Inativo")
-    // $ procura um caractere dentro da string - procura 1 e 2
-    oBrowse:AddLegend("!(AllTrim(ZF1->ZF1_STATUS) $ '12')", "PINK", "Inválido")
+    
+oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '1'", "GREEN", "Ativo")
+oBrowse:AddLegend("AllTrim(ZF1->ZF1_STATUS) == '2'", "RED", "Inativo")
+// $ procura um caractere dentro da string - procura 1 e 2
+oBrowse:AddLegend("(AllTrim(ZF1->ZF1_STATUS) != '1' .AND. AllTrim(ZF1->ZF1_STATUS) != '2')", "PINK", "Inválido")
 
     // Seleciona a área e índice padrão
     DbSelectArea("ZF1")
     ZF1->(DbSetOrder(1))
-
+   
 
     // Ativa o Browse
     oBrowse:Activate()
     FWRestArea(aArea)
 
-Return
+Return 
 
+//Adiciona Legenda
 User Function AXLEGENDA()
     Local aLegenda := {}
 
-    aAdd(aLegenda, {"BR_VERDE",    "Ativo"})
-    aAdd(aLegenda, {"BR_VERMELHO", "Inativo"})
-    aAdd(aLegenda, {"BR_PINK",     "Inválido"})
+    aAdd(aLegenda, {"BR_VERDE",    "Ativo"})  
+    aAdd(aLegenda, {"BR_VERMELHO", "Inativo"})      
+    aAdd(aLegenda, {"BR_PINK",     "Inválido"})    
 
     BrwLegenda("Legenda", "Legenda dos Registros", aLegenda)
 Return
 
-
 Static Function MenuDef()
-
     Local aRotina := {}
 
-    //     // //Adicionando opcoes do menu
-   // aAdd(aRotina, {"Pesquisar", "AXPESQUI", 0, 1})
-    aAdd(aRotina, {"Visualizar", "AXVISUAL", 0, 1})
-    aAdd(aRotina, {"Incluir", "AXINCLUI", 0, 2})
-    //aAdd(aRotina, {"Alterar", "AXALTERA", 0, 4})
-   // aAdd(aRotina, {"Excluir", "AXDELETA", 0, 5})
-    aAdd(aRotina, {"Importar CSV", "U_ImpCSV", 0, 3})
+    //Adicionando opcoes do menu
+    aAdd(aRotina, {"Pesquisar", "AXPESQUI", 0, 1})
+    aAdd(aRotina, {"Visualizar", "AXVISUAL", 0, 2})
+    aAdd(aRotina, {"Incluir", "AXINCLUI", 0, 3})
+    aAdd(aRotina, {"Alterar", "AXALTERA", 0, 4})
+    aAdd(aRotina, {"Excluir", "AXDELETA", 0, 5})
+    aAdd(aRotina, {"Importar CSV", "U_ImpCSV", 0, 6})
+    aAdd(aRotina, {"Legenda", "U_AXLEGENDA", 0, 7}) // U_ para chamar user function
     
-    aAdd(aRotina, {"Recebimentos não Encontrados", "U_ImprimeErros", 0, 4})
-
-aAdd(aRotina, {"Legenda", "U_AXLEGENDA", 0, 7})
- 
-
 Return aRotina
-
-
-// Static Function MenuDef()
-//     Local aRotina := {}
-
-// ADD OPTION aRotina TITLE "Importar CSV" ACTION 'MsAguarde({|| U_ImpCSV()}, "Aguarde...", "Executando a rotina...")';
-// ADD OPTION aRotina TITLE 'Recebimentos não Encontrados' ACTION 'u_imprimeErros()' OPERATION 8 ACCESS 0;
-
-//     // //Adicionando opcoes do menu
-//     aAdd(aRotina, {"Pesquisar", "AXPESQUI", 0, 1})
-//     aAdd(aRotina, {"Visualizar", "AXVISUAL", 0, 2})
-//     aAdd(aRotina, {"Incluir", "AXINCLUI", 0, 3})
-//     aAdd(aRotina, {"Alterar", "AXALTERA", 0, 4})
-//     aAdd(aRotina, {"Excluir", "AXDELETA", 0, 5})
-//     aAdd(aRotina, {"Importar CSV", "U_ImpCSV", 0, 6})
-//     aAdd(aRotina, {"Legenda", "U_AXLEGENDA", 0, 7})
-
-// Return aRotina
 
 User Function ImpCSV()
 
@@ -110,7 +83,7 @@ User Function ImpCSV()
 
     Local cLinha      := ""
     Local cCodAux     := ""
-    // aErrosImp := {}
+
     // Abrir uma tela para escolher o arquivo.
     cDiret := cGetFile('Arquivo CSV|*.csv| Arquivo TXT|*.txt| Arquivos XML|*.xml',; // Seleção de Arquivo: cGetFile, Armazena o caminho do arqv: cDiret
         'Selecao de Arquivos',;                                         // Titulo da janela
@@ -212,21 +185,10 @@ User Function ImpCSV()
                         // If !SB1->(DBSEEK(xFilial("SB1") + Padr(AllTrim(AxZF1IMP[njx][1]), TamSX3("B1_COD")[1])))
                         nErros++
                         cLinhasErro += "Registro " + cValToChar(njx) + " (" + AllTrim(cCodAux) + "): Produto não cadastrado na tabela SB1." + CRLF
-                        aAdd(aErrosImp,{;
-                            AxZF1IMP[njx][1],; //Código
-                            AxZF1IMP[njx][4],; //Data
-                            AxZF1IMP[njx][2],; //Descrição
-                            AxZF1IMP[njx][3],; //Quantidade
-                            AxZF1IMP[njx][5],; //Valor
-                            AxZF1IMP[njx][6],; //Motivo
-                            "Produto não cadastrado na SB1" })
-
                         dbSelectArea("ZF1")
                         ZF1->(dbSetOrder(1))
                         nAtual++
                         Loop
-
-
                     EndIf
 
 
@@ -336,81 +298,28 @@ User Function ImpCSV()
 
     End Transaction
 
-    
-    If nErros == 0 && nIncluidos > 0
-     //   cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
+    If nErros == 0
+        cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
         cMsg += "Total de linhas no arquivo: " + cValToChar(qtdaux) + CRLF
-     //   cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
+        cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
         cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
-        //cMsg += "Registros duplicados (não inseridos): " + cValToChar(nDuplicados) + CRLF
+        cMsg += "Registros duplicados (não inseridos): " + cValToChar(nDuplicados) + CRLF
 
         FWAlertSuccess(cMsg, "Resultado da Importação")
-    
     Else
-      //  cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
-        // cMsg += "Linhas não inseridas (erros): " + cValToChar(nErros) + CRLF // substituir por imprmeErros
+        cMsg += "Leitura do arquivo CSV finalizada!" + CRLF + CRLF
+        cMsg += "Linhas não inseridas (erros): " + cValToChar(nErros) + CRLF
 
-        // cMsg += CRLF + "As seguintes linhas não foram inseridas, verifique: " + CRLF
-        // cMsg += cLinhasErro + CRLF
+        cMsg += CRLF + "As seguintes linhas não foram inseridas, verifique: " + CRLF
+        cMsg += cLinhasErro + CRLF
 
         cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
         cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
-        //cMsg += "Registros duplicados (não inseridos): " + cValToChar(nDuplicados) + CRLF
-        FWAlertSuccess(cMsg, "Resultado da Importação")
-
-    
-    MsProcTxt("Processando registros...")
-        U_ImprimeErros()
+        cMsg += "Registros duplicados (não inseridos): " + cValToChar(nDuplicados) + CRLF
+        FWAlertWarning(cMsg, "Resultado da Importação (Aviso)")
     EndIf
 
 Return
-
-
-
-User Function ImprimeErros()
-
-    Local oFWMsExcel
-    Local oExcel
-    Local nX
-    Local cArqImp := GetTempPath() + "Erros_Importacao.xml"
-
-    If Len(aErrosImp) == 0
-        MsgAlert("Nenhum erro encontrado na importação.")
-        Return
-    EndIf
-
-    oFWMsExcel := FWMsExcel():New()
-
-    oFWMsExcel:AddWorkSheet("Arquivos Não importados")
-    oFWMsExcel:AddTable("Arquivos Não importados","Importacao")
-
-    oFWMsExcel:AddColumn("Arquivos Não importados","Importacao","Código",1,1)
-    oFWMsExcel:AddColumn("Arquivos Não importados","Importacao","Data",1,1)
-    oFWMsExcel:AddColumn("Arquivos Não importados","Importacao","Descrição",1,1)
-    oFWMsExcel:AddColumn("Arquivos Não importados","Importacao","Quantidade",1,1)
-    oFWMsExcel:AddColumn("Arquivos Não importados","Importacao","Valor",1,1)
-    oFWMsExcel:AddColumn("Arquivos Não importados","Importacao","Motivo",1,1)
-
-    For nX := 1 To Len(aErrosImp)
-
-        oFWMsExcel:AddRow(;
-            "Arquivos Não importados",;
-            "Importacao",;
-            aErrosImp[nX] )
-
-    Next
-
-    oFWMsExcel:Activate()
-    oFWMsExcel:GetXMLFile(cArqImp)
-
-    oExcel := MsExcel():New()
-    oExcel:WorkBooks:Open(cArqImp)
-    oExcel:SetVisible(.T.)
-    oExcel:Destroy()
-
-Return
-
-
 
 User Function VisuCSV()
 
