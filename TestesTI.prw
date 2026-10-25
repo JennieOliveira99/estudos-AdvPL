@@ -2,56 +2,7 @@
 #include "protheus.ch"
 #include "TOPCONN.CH"
 
-// User Function ImpCusto()
-//     Local aArea := FWGetArea()
-//     Local oBrowse
-
-//     Private aRotina := {}
-//     Private cCadastro := "Importação de Registros CSV"
-
-//     //Definição do Menu
-//     aRotina := MenuDef()
-
-//     //Instanciando o Browse
-//     oBrowse := FWMBrowse() :New()
-//     oBrowse:SetAlias("SZX")
-//     oBrowse:SetDescription(cCadastro)
-
-//     // Seleciona a área e índice padrão
-//     DbSelectArea("SZX")
-//     SZX->(DbSetOrder(1))
-
-//     // Ativa o Browse
-//     oBrowse:Activate()
-
-//     FWRestArea(aArea)
-// Return
-
-// //Adiciona Legenda
-// User Function AXLEGENDA()
-//     Local aLegenda := {}
-
-//     aAdd(aLegenda, {"BR_VERDE",    "Ativo"})
-//     aAdd(aLegenda, {"BR_VERMELHO", "Inativo"})
-//     aAdd(aLegenda, {"BR_PINK",     "Inválido"})
-
-//     BrwLegenda("Legenda", "Legenda dos Registros", aLegenda)
-// Return
-
-// Static Function MenuDef()
-//     Local aRotina := {}
-
-//     //Adicionando opcoes do menu
-//     aAdd(aRotina, {"Pesquisar", "AXPESQUI", 0, 1})
-//     aAdd(aRotina, {"Visualizar", "AXVISUAL", 0, 2})
-//     aAdd(aRotina, {"Incluir", "AXINCLUI", 0, 3})
-//     aAdd(aRotina, {"Alterar", "AXALTERA", 0, 4})
-//     aAdd(aRotina, {"Excluir", "AXDELETA", 0, 5})
-//     aAdd(aRotina, {"Importar CSV", "U_ImpCSV", 0, 6})
-//     aAdd(aRotina, {"Legenda", "U_AXLEGENDA", 0, 7}) // U_ para chamar user function
-// Return aRotina
-
-User Function ImpCSV()
+User Function ImpCusto()
     // Variáveis para ler o CSV
     Local cDiret
     Local aCampos     := {}
@@ -74,15 +25,7 @@ User Function ImpCSV()
     Local cCodAux     := ""
 
     // Abrir uma tela para escolher o arquivo.
-    // cDiret := cGetFile('Arquivo CSV|*.csv| Arquivo TXT|*.txt| Arquivos XML|*.xml',; // Seleção de Arquivo: cGetFile, Armazena o caminho do arqv: cDiret
-    //     'Selecao de Arquivos',;                                         // Titulo da janela
-    //     0,;                                                             // Filtro inicial
-    //     'C:\csv\',;                                                     // Pasta inicial
-    //     .F.,;                                                         // Modo da janela: .F. Abrir | .T. Salvar
-    //     GETF_LOCALHARD + GETF_NETWORKDRIVE,;                         // Permite buscar no disco local e rede
-    //     .T.)                                                         // Exibe o diretório do servidor de aplicação ou local.
-
- cDiret := tFileDialog( "CSV files (*.csv) ", 'Seleção de Arquivos', , , .F., ) 
+    cDiret := tFileDialog( "CSV files (*.csv) ", 'Seleção de Arquivos', , , .F., )
     // Se o usuário fechar a tela sem escolher um arqv, a rotina é encerrada
     If Empty(cDiret)
         Alert("Nenhum arquivo selecionado.")
@@ -222,7 +165,7 @@ User Function ImpCSV()
                         // Verifica se algum campo mudou
                         If SZX->ZX_DESC <> AxSZXIMP[njx][5] .OR. ;
                                 SZX->ZX_CUSO <> Val(StrTran(AxSZXIMP[njx][6], ",", ".")) .OR. ;
-                               SZX->ZX_CUSTD <> Val(StrTran(AxSZXIMP[njx][7], ",", ".")) .OR. ;
+                                SZX->ZX_CUSTD <> Val(StrTran(AxSZXIMP[njx][7], ",", ".")) .OR. ;
                                 SZX->ZX_CUSCALC <> Val(StrTran(AxSZXIMP[njx][8], ",", ".")) .OR. ;
                                 SZX->ZX_PRODUTO <> AxSZXIMP[njx][9] .OR. ;
                                 SZX->ZX_CUSLIQ <> Val(StrTran(AxSZXIMP[njx][10], ",", ".")) .OR. ;
