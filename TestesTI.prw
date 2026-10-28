@@ -2,6 +2,8 @@
 #include "protheus.ch"
 #include "TOPCONN.CH"
 
+Static aErrosImp := {}
+
 User Function ImpCusto()
     // Variáveis para ler o CSV
     Local cDiret
@@ -19,6 +21,7 @@ User Function ImpCusto()
     Local nDuplicados := 0
     Local nErros      := 0
     Local cLinhasErro := ""
+    Local cMotivo     := ""
     Local cMsg        := ""
     Local cLinha      := ""
     Local cCodAux     := ""   // Código do grupo/produto
@@ -34,6 +37,9 @@ User Function ImpCusto()
     Local nCustoAnt   := 0
     Local nTolerancia := 0.20 // 20% de tolerância
     Local nPercDif    := 0
+
+    // Limpa os erros de importações anteriores
+    aErrosImp := {}
 
     // Abrir uma tela para escolher o arquivo
     cDiret := tFileDialog( "CSV files (*.csv) ", 'Seleção de Arquivos', , , .F., )
@@ -124,25 +130,36 @@ User Function ImpCusto()
                             !IsNumDot(StrTran(AxSZXIMP[njx][7], ",", "."))
 
                         nErros++
+                        cMotivo := ""
                         cLinhasErro += "Registro " + cValToChar(njx) + " (" + AllTrim(AxSZXIMP[njx][4]) + "): "
 
                         If !IsNumeric(AxSZXIMP[njx][2])
-                            cLinhasErro += "Ano inválido [" + AxSZXIMP[njx][2] + "] "
+                            cMotivo += "Ano inválido [" + AxSZXIMP[njx][2] + "] "
                         EndIf
                         If !IsNumeric(AxSZXIMP[njx][3])
-                            cLinhasErro += "Mês inválido [" + AxSZXIMP[njx][3] + "] "
+                            cMotivo += "Mês inválido [" + AxSZXIMP[njx][3] + "] "
                         EndIf
                         If !IsNumDot(StrTran(AxSZXIMP[njx][5], ",", "."))
-                            cLinhasErro += "ZX_CUSTD inválido [" + AxSZXIMP[njx][5] + "] "
+                            cMotivo += "ZX_CUSTD inválido [" + AxSZXIMP[njx][5] + "] "
                         EndIf
                         If !IsNumDot(StrTran(AxSZXIMP[njx][6], ",", "."))
-                            cLinhasErro += "ZX_CUSLIQ inválido [" + AxSZXIMP[njx][6] + "] "
+                            cMotivo += "ZX_CUSLIQ inválido [" + AxSZXIMP[njx][6] + "] "
                         EndIf
                         If !IsNumDot(StrTran(AxSZXIMP[njx][7], ",", "."))
-                            cLinhasErro += "ZX_CUSFIC inválido [" + AxSZXIMP[njx][7] + "] "
+                            cMotivo += "ZX_CUSFIC inválido [" + AxSZXIMP[njx][7] + "] "
                         EndIf
 
-                        cLinhasErro += CRLF
+                        cLinhasErro += cMotivo + CRLF
+
+                        aAdd(aErrosImp, { ;
+                            AxSZXIMP[njx][2],; // Ano
+                            AxSZXIMP[njx][3],; // Mês
+                            AxSZXIMP[njx][4],; // Grupo
+                            AxSZXIMP[njx][5],; // Custo Padrão
+                            AxSZXIMP[njx][6],; // Custo Líquido
+                            AxSZXIMP[njx][7],; // Custo Fictício
+                            AllTrim(cMotivo) })
+
                         nAtual++
                         Loop
                     EndIf
@@ -167,6 +184,16 @@ User Function ImpCusto()
                     If !SB1->(DBSEEK(xFilial("SB1") + cCodAux))
                         nErros++
                         cLinhasErro += "Registro " + cValToChar(njx) + " (" + AllTrim(cCodAux) + "): Grupo não encontrado na tabela SB1." + CRLF
+
+                        aAdd(aErrosImp, { ;
+                            AxSZXIMP[njx][2],; // Ano
+                            AxSZXIMP[njx][3],; // Mês
+                            AxSZXIMP[njx][4],; // Grupo
+                            AxSZXIMP[njx][5],; // Custo Padrão
+                            AxSZXIMP[njx][6],; // Custo Líquido
+                            AxSZXIMP[njx][7],; // Custo Fictício
+                            "Grupo não encontrado na tabela SB1" })
+
                         nAtual++
                         Loop
                     EndIf
@@ -186,6 +213,16 @@ User Function ImpCusto()
                             If Abs(nPercDif) > nTolerancia
                                 nErros++
                                 cLinhasErro += "Registro " + cValToChar(njx) + " (" + AllTrim(cCodAux) + "): Divergência de custo acima da tolerância. CUSO Anterior: " + cValToChar(nCustoAnt) + " | Novo CUSTD: " + cValToChar(nCustd) + CRLF
+
+                                aAdd(aErrosImp, { ;
+                                    AxSZXIMP[njx][2],; // Ano
+                                    AxSZXIMP[njx][3],; // Mês
+                                    AxSZXIMP[njx][4],; // Grupo
+                                    AxSZXIMP[njx][5],; // Custo Padrão
+                                    AxSZXIMP[njx][6],; // Custo Líquido
+                                    AxSZXIMP[njx][7],; // Custo Fictício
+                                    "Divergência de custo acima da tolerância. CUSO Anterior: " + cValToChar(nCustoAnt) + " | Novo CUSTD: " + cValToChar(nCustd) })
+
                                 nAtual++
                                 Loop
                             EndIf
@@ -206,7 +243,7 @@ User Function ImpCusto()
                             MsUnlock()
                             nAlterados++
                         Else
-                            // Registro idêntico: não grava, só contabiliza como duplicado
+                            // Registro idêntico: não grava, contabiliza como duplicado
                             nDuplicados++
                         EndIf
                     Else
@@ -230,6 +267,7 @@ User Function ImpCusto()
                 Else
                     // Campos obrigatórios vazios
                     nErros++
+                    cMotivo := ""
                     cLinhasErro += "Registro " + cValToChar(njx) + ": "
 
                     If !Empty(AxSZXIMP[njx][4])
@@ -237,18 +275,27 @@ User Function ImpCusto()
                     EndIf
 
                     If Empty(AxSZXIMP[njx][2])
-                        cLinhasErro += "Ano não informado "
+                        cMotivo += "Ano não informado "
                     EndIf
 
                     If Empty(AxSZXIMP[njx][3])
-                        cLinhasErro += "Mês não informado "
+                        cMotivo += "Mês não informado "
                     EndIf
 
                     If Empty(AxSZXIMP[njx][4])
-                        cLinhasErro += "Grupo não informado "
+                        cMotivo += "Grupo não informado "
                     EndIf
 
-                    cLinhasErro += CRLF
+                    cLinhasErro += cMotivo + CRLF
+
+                    aAdd(aErrosImp, { ;
+                        AxSZXIMP[njx][2],; // Ano
+                        AxSZXIMP[njx][3],; // Mês
+                        AxSZXIMP[njx][4],; // Grupo
+                        AxSZXIMP[njx][5],; // Custo Padrão
+                        AxSZXIMP[njx][6],; // Custo Líquido
+                        AxSZXIMP[njx][7],; // Custo Fictício
+                        AllTrim(cMotivo) })
                 EndIf
 
                 nAtual++
@@ -256,7 +303,6 @@ User Function ImpCusto()
         EndIf
     End Transaction
 
-   
     If nErros == 0
         cMsg += "Total de linhas no arquivo: " + cValToChar(qtdeMax) + CRLF
         cMsg += "Novos registros inseridos: " + cValToChar(nIncluidos) + CRLF
@@ -270,14 +316,58 @@ User Function ImpCusto()
         cMsg += "Registros atualizados: " + cValToChar(nAlterados) + CRLF
         cMsg += "Registros duplicados (não inseridos): " + cValToChar(nDuplicados) + CRLF
         FWAlertWarning(cMsg, "Resultado da Importação")
+
+        U_ErrosCusto()
     EndIf
 Return
 
+
+User Function ErrosCusto()
+
+    Local oFWMsExcel
+    Local nX
+    Local cNomeArq := "Erros_Importacao_Custos.xml"
+    Local cArqSrv  := "\system\" + cNomeArq
+
+    // Se a importação não gerou nenhum erro, não há o que exportar
+    If Len(aErrosImp) == 0
+        MsgAlert("Nenhum erro encontrado na importação.")
+        Return
+    EndIf
+
+    oFWMsExcel := FWMsExcel():New()     // Cria o Excel em memória 
+
+    // Cria a aba (planilha) com o nome que aparece na parte de baixo do Excel
+    oFWMsExcel:AddWorkSheet("Custos Não Importados")
+
+    // Cria uma tabela dentro da aba
+    oFWMsExcel:AddTable("Custos Não Importados","Importacao")
+
+    // Define as colunas da tabela
+    oFWMsExcel:AddColumn("Custos Não Importados","Importacao","Ano",1,1)
+    oFWMsExcel:AddColumn("Custos Não Importados","Importacao","Mês",1,1)
+    oFWMsExcel:AddColumn("Custos Não Importados","Importacao","Grupo",1,1)
+    oFWMsExcel:AddColumn("Custos Não Importados","Importacao","Custo Padrão (ZX_CUSTD)",1,1)
+    oFWMsExcel:AddColumn("Custos Não Importados","Importacao","Custo Líquido (ZX_CUSLIQ)",1,1)
+    oFWMsExcel:AddColumn("Custos Não Importados","Importacao","Custo Fictício (ZX_CUSFIC)",1,1)
+    oFWMsExcel:AddColumn("Custos Não Importados","Importacao","Motivo",1,1)
+
+    // Adiciona uma linha na planilha para cada registro não importado
+    For nX := 1 To Len(aErrosImp)
+        oFWMsExcel:AddRow("Custos Não Importados", "Importacao", aErrosImp[nX])
+    Next
+
+    oFWMsExcel:Activate()
+    oFWMsExcel:GetXMLFile(cArqSrv)          // grava no servidor
+
+    CpyS2T(cArqSrv, GetTempPath())          // envia para a máquina do usuário
+
+    FErase(cArqSrv)                         // remove o arquivo temporário do servidor
+
+Return
 
 User Function VisuCusto()
     DbSelectArea("SZX")
     SZX->(DbSetOrder(1))
     AxCadastro("SZX", "Visualizar Custos")
 Return
-
-
